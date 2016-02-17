@@ -4,6 +4,7 @@
 extern "C"{
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
+#include <gst/app/gstappsrc.h>
 }
 #include <boost/scoped_ptr.hpp>
 #include <ros/ros.h>
@@ -19,10 +20,10 @@ extern "C"{
 
 namespace gscam {
 
-  class GSCam {
+  class GSPipeline {
   public:
-    GSCam(ros::NodeHandle nh_camera, ros::NodeHandle nh_private);
-    ~GSCam();
+    GSPipeline(ros::NodeHandle nh_camera, ros::NodeHandle nh_private);
+    ~GSPipeline();
 
     bool configure();
     bool init_stream();
@@ -30,21 +31,35 @@ namespace gscam {
     void cleanup_stream();
 
     void run();
-
+    
+    //GStreamer callback hooks via a this*
+    void new_sample_cb();
+    void new_preroll_cb();
   private:
+    //Receive inbound images
+    void imageCallback(sensor_msgs::ImageConstPtr msg);
     // General gstreamer configuration
     std::string gsconfig_;
 
     // Gstreamer structures
     GstElement *pipeline_;
     GstElement *sink_;
-
+    GstElement *src_;
+    GstAppSinkCallbacks callbacks;
+    GstClockTime timestamp;
+    
     // Appsink configuration
     bool sync_sink_;
     bool preroll_;
     bool reopen_on_eof_;
     bool use_gst_timestamps_;
 
+
+    
+    //Camera src configuration
+    int src_width_;
+    int src_height_;
+    
     // Camera publisher configuration
     std::string frame_id_;
     int width_, height_;
@@ -52,7 +67,7 @@ namespace gscam {
     std::string camera_name_;
     std::string camera_info_url_;
 
-    // ROS Inteface
+    // ROS Interface
     // Calibration between ros::Time and gst timestamps
     double time_offset_;
     ros::NodeHandle nh_, nh_private_;
@@ -62,6 +77,10 @@ namespace gscam {
     // Case of a jpeg only publisher
     ros::Publisher jpeg_pub_;
     ros::Publisher cinfo_pub_;
+
+    //Pipeline source subscriber
+    std::string image_topic_;
+    image_transport::Subscriber image_sub_;
   };
 
 }

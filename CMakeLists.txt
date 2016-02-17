@@ -1,19 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 project(gscam)
 
 # System Dependencies
 find_package(PkgConfig)
+#else()
+#  message(STATUS "gst 0.1")
+#  pkg_check_modules(GSTREAMER REQUIRED gstreamer-0.10)
+#  pkg_check_modules(GST_APP REQUIRED gstreamer-app-0.10)
+#endif()
+#if(GSTREAMER_VERSION_1_x)
 
-if(GSTREAMER_VERSION_1_x)
-  message(STATUS "gst 1.0")
-  pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
-  pkg_check_modules(GST_APP REQUIRED gstreamer-app-1.0)
-else()
-  message(STATUS "gst 0.1")
-  pkg_check_modules(GSTREAMER REQUIRED gstreamer-0.10)
-  pkg_check_modules(GST_APP REQUIRED gstreamer-app-0.10)
-endif()
+message(STATUS "gst 1.0")
+pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
+pkg_check_modules(GST_APP REQUIRED gstreamer-app-1.0)
+
+MESSAGE("Found GStreamer libraries:"  ${GSTREAMER_LIBRARIES} ${GST_APP_LIBRARIES})
 
 if(USE_ROSBUILD)
   # Use rosbuild
@@ -81,10 +83,28 @@ else()
     ${catkin_LIBRARIES}
     ${GSTREAMER_LIBRARIES}
     ${GST_APP_LIBRARIES})
+    
+ add_library(gspipeline src/gspipeline.cpp)
+  target_link_libraries(gspipeline
+    ${catkin_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
+    ${GST_APP_LIBRARIES})
 
+  add_executable(gspipeline_node src/gspipeline_node.cpp)
+  target_link_libraries(gspipeline_node gspipeline
+    ${catkin_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
+    ${GST_APP_LIBRARIES})
+  set_target_properties(gscam_node PROPERTIES OUTPUT_NAME gscam)
+
+  add_library(GSPipelineNodelet src/gspipeline_nodelet.cpp)
+  target_link_libraries(GSPipelineNodelet gspipeline
+    ${catkin_LIBRARIES}
+    ${GSTREAMER_LIBRARIES}
+    ${GST_APP_LIBRARIES})
   # Install directives
 
-  install(TARGETS gscam gscam_node GSCamNodelet
+  install(TARGETS gscam gscam_node GSCamNodelet gspipeline gspipeline_node GSPipelineNodelet
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
